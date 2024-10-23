@@ -6,6 +6,7 @@ import (
 	_ "image/png"
 	"log"
 	"os"
+	"regexp"
 
 	"github.com/godoes/printers"
 	"github.com/nfnt/resize"
@@ -41,11 +42,22 @@ const (
 // Función principal
 func main() {
 	// Abrir imagen PNG
-	file, err := os.Open("./img/gh_logo.png")
-	if err != nil {
-		log.Fatal(err)
+	args := os.Args
+
+	var file *os.File
+	var err error
+
+	if len(args) == 2 {
+		file, err = checkImage(args[1])
+	} else {
+		file, err = os.Open("./img/gh_logo.png")
+		log.Println("Default file")
 	}
+
+	log.Printf("File found -> %s", file.Name())
 	defer file.Close()
+
+	check(err)
 
 	// Decodificar la imagen
 	img, err := png.Decode(file)
@@ -97,20 +109,17 @@ func sendBitmapToPrinter(bitmap []byte, width int, height int, mode int) {
 	// Comando de inicio para imprimir imagen
 	command := []byte{0x1B, 0x28, 0x2E, 0x01, byte(mode), 0x00}
 
-	// Aquí deberías implementar el código para enviar `command` y `bitmap` a la impresora
-	// Esto puede variar dependiendo de cómo estés enviando datos a la impresora.
-	// Aquí se muestra un ejemplo de impresión, deberías adaptarlo según tus necesidades:
-	log.Println("Enviando comando a la impresora:", command)
+	printable := append(command, bitmap...)
 
-	// Ejemplo de envío de datos a la impresora
-	// `SendToPrinter` es una función ficticia que deberías implementar
-	// err := SendToPrinter(append(command, bitmap...))
-	// if err != nil {
-	//     log.Println("Error al enviar a la impresora:", err)
-	// }
+	print(printable)
+}
 
-	// Simulación de impresión de los datos
-	log.Println("Datos de la imagen enviados a la impresora:", bitmap)
-	print(command)
-	print(bitmap)
+func checkImage(imgPath string) (*os.File, error) {
+	r, _ := regexp.Compile("\\W*.png")
+
+	if !r.MatchString(imgPath) {
+		log.Fatal("La imagen no es PNG")
+	}
+
+	return os.Open(imgPath)
 }
